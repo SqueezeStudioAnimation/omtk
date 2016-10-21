@@ -81,16 +81,21 @@ class Twistbone(Module):
         self.create_bend = True
         self._sys_ribbon = None
         self.num_twist = 3
+        self.num_ctrls = 1
 
         super(Twistbone, self).__init__(*args, **kwargs)
 
-    def build(self, orient_ik_ctrl=True, num_twist=None, create_bend=None, *args, **kwargs):
+    def build(self, orient_ik_ctrl=True, num_twist=None, num_ctrls=None, create_bend=None, *args, **kwargs):
         if len(self.chain_jnt) < 2:
             raise Exception("Invalid input count. Expected 2, got {0}. {1}".format(len(self.chain_jnt), self.chain_jnt))
 
         # Support some properties that could be redefined at build time
+        # todo: Don't modify the properties, only use as overrides.
         if num_twist:
             self.num_twist = num_twist
+
+        if num_ctrls:
+            self.num_ctrls = num_ctrls
 
         if create_bend:
             self.create_bend = create_bend
@@ -128,7 +133,7 @@ class Twistbone(Module):
         pymel.parentConstraint(jnt_s, driver_grp)
 
         # Create a second chain that will drive the rotation of the skinned joint
-        driverjnts = libRigging.create_chain_between_objects(jnt_s, jnt_e, self.num_twist)
+        driverjnts = libRigging.create_chain_between_objects(jnt_s, jnt_e, self.num_ctrls+2)
 
         # Rename the skinning subjnts
         for i, sub_jnt in enumerate(self.subjnts):
@@ -171,7 +176,7 @@ class Twistbone(Module):
         if self.create_bend:
             # Create Ribbon
             sys_ribbon = Ribbon(self.subjnts, name=nomenclature_rig.resolve("bendRibbon"), rig=self.rig)
-            sys_ribbon.build(create_ctrl=False, degree=3, num_ctrl=self.num_twist, no_subdiv=False, rot_fol=False)
+            sys_ribbon.build(create_ctrl=False, degree=3, num_ctrl=self.num_ctrls+2, no_subdiv=False, rot_fol=False)
             self.ctrls = sys_ribbon.create_ctrls(ctrls=self.ctrls, no_extremity=True,
                                                  constraint_rot=False, refs=self.chain_jnt[1])
             # Point constraint the driver jnt on the ribbon jnt to drive the bending
