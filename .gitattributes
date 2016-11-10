@@ -1,1 +1,3 @@
 *.ma -diff
+# Maya on Windows won't be able to load a shelf with lf eol...
+shelf_*.mel text eol=crlf
