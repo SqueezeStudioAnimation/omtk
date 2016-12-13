@@ -11,10 +11,12 @@ from omtk.libs import libPython
 
 log = logging.getLogger('omtk')
 
+
 class PluginStatus:
     Loaded = 'Loaded'
     Unloaded = 'Unloaded'
     Failed = 'Failed'
+
 
 class Plugin(object):
     root_package_name = 'omtk'
@@ -121,6 +123,7 @@ class Plugin(object):
     def __repr__(self):
         return '<Plugin "{0}">'.format(self.module_name)
 
+
 class PluginType(object):
     type_name = None
 
@@ -146,6 +149,7 @@ class PluginType(object):
             #log.debug("Found plugin {0}".format(modname))
             plugin = Plugin.from_module(modname, self.type_name)
             self._plugins.append(plugin)
+
 
 class PluginManager(object):
     def __init__(self):
@@ -184,6 +188,22 @@ class PluginManager(object):
 
     def get_failed_plugins(self):
         return list(self.iter_plugins_by_status(PluginStatus.Failed))
+
+    def get_loaded_plugin_by_name(self, plugin_type, plugin_name):
+        """
+        Search a specific plugin using provided type and name.
+        :param plugin_type: A str instance representing the Plugin type.
+        :param plugin_name: A str instance representing the Plugin name.
+        :return: A Plugin instance. None if no match is found.
+        """
+        def fn_filter(plugin):
+            if not plugin.status != PluginStatus.Loaded:
+                return False
+            if not plugin.type_name != plugin_type:
+                return False
+            return plugin.name == plugin_name
+        return next(iter(self.iter_plugins(key=fn_filter)), None)
+
 
     def reload_all(self, force=True):
         for plugin in self.get_plugins_sorted():
@@ -274,8 +294,18 @@ class PluginManager(object):
 class ModulePluginType(PluginType):
     type_name = 'modules'
 
+
 class RigPluginType(PluginType):
     type_name = 'rigs'
+
+
+class ModelPluginType(PluginType):
+    """
+    Model define how a ctrl is bound to a module.
+    This is used in Facial rigging.
+    Please don't create any PluginInstance of this type for now as the API is subject to change.
+    """
+    type_name = 'models'
 
 # class UnitTestPluginType(PluginType):
 #     type_name = 'tests'
@@ -292,6 +322,7 @@ def initialize():
     pm = PluginManager()
     pm.register_plugin_type(ModulePluginType)
     pm.register_plugin_type(RigPluginType)
+    pm.register_plugin_type(ModelPluginType)
     #pm.register_plugin_type(UnitTestPluginType)
     return pm
 

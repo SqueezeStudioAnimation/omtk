@@ -226,6 +226,13 @@ class AbstractAvar(classModule.Module):
     #
 
     @libPython.memoized_instancemethod
+    def get_translation(self):
+        """
+        :return: A pymel.datatypes.Vector representing the world translation of the Avar bind pose.
+        """
+        return self.jnt.getTranslation(space='world') if self.jnt else None
+
+    @libPython.memoized_instancemethod
     def get_base_uv(self):
         pos = self.get_jnt_tm().translate
 
@@ -557,6 +564,7 @@ class AvarSimple(AbstractAvar):
                     parent_scl = self.rig.get_head_jnt()
 
                 self.model_ctrl.build(
+                    parent,
                     self,
                     ctrl_tm=ctrl_tm,
                     ctrl_size=ctrl_size,
@@ -586,7 +594,11 @@ class AvarSimple(AbstractAvar):
 
             # self.connect_ctrl(self.ctrl)
             if connect:
-                self.model_ctrl.connect(self, parent)
+                self.ctrl_model_connect(parent)
+                # self.model_ctrl.connect(self, parent)
+
+    def ctrl_model_connect(self, parent):
+        self.model_ctrl.connect(self, parent)
 
 
     def calibrate(self, **kwargs):

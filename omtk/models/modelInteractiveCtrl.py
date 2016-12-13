@@ -10,6 +10,15 @@ from omtk.libs import libPymel
 from omtk.libs import libAttr
 
 
+class ModelInteractiveCtrlBindMethod(object):
+    """
+    Resolve how do we controll the ctrl position.
+    """
+    __slots__ = ()
+    Follicle = 0  # Follow exactly the mesh deformation. Best results, worst performances.
+    Constraint = 1  # Guess the position using constraints. Worst results, best performances.
+
+
 class ModelInteractiveCtrl(Module):
     """
     An InteractiveCtrl ctrl is directly constrained on a mesh via a layer_fol.
@@ -25,6 +34,7 @@ class ModelInteractiveCtrl(Module):
     2) Connecting the doritos ctrl to something
     3) Optionally call .calibrate()
     """
+    _BIND_METHOD = ModelInteractiveCtrlBindMethod.Follicle
     _CLS_CTRL = BaseCtrl
     _ATTR_NAME_SENSITIVITY_TX = 'sensitivityX'
     _ATTR_NAME_SENSITIVITY_TY = 'sensitivityY'
@@ -65,7 +75,27 @@ class ModelInteractiveCtrl(Module):
     def iter_ctrls(self):
         yield self.ctrl
 
-    def build(self, avar, ref=None, ref_tm=None, grp_rig=None, obj_mesh=None, u_coord=None, v_coord=None, flip_lr=False, follow_mesh=True, ctrl_tm=None, ctrl_size=None, parent_pos=None, parent_rot=None, parent_scl=None, constraint=False, **kwargs):
+    def build(self, parent, avar, ref=None, ref_tm=None, grp_rig=None, obj_mesh=None, u_coord=None, v_coord=None, flip_lr=False, follow_mesh=True, ctrl_tm=None, ctrl_size=None, parent_pos=None, parent_rot=None, parent_scl=None, constraint=False, **kwargs):
+        """
+        Build the necessary logic to compute the desired transform for the ctrl.
+        :param parent: The module containing all the influences.
+        :param avar: The module affected by the controller.
+        :param ref: TODO: Move to function internals?
+        :param ref_tm: TODO: Move to function internals?
+        :param grp_rig: TODO: Move to function internals?
+        :param obj_mesh: TODO: Move to function internals?
+        :param u_coord: TODO: Move to function internals?
+        :param v_coord: TODO: Move to function internals?
+        :param flip_lr: TODO: Move to function internals?
+        :param follow_mesh: TODO: Move to function internals?
+        :param ctrl_tm: TODO: Move to function internals?
+        :param ctrl_size: TODO: Move to function internals?
+        :param parent_pos: TODO: Move to function internals?
+        :param parent_rot: TODO: Move to function internals?
+        :param parent_scl: TODO: Move to function internals?
+        :param constraint: TODO: Move to function internals?
+        :param kwargs: TODO: Move to function internals?
+        """
         super(ModelInteractiveCtrl, self).build(**kwargs)
 
         nomenclature_anm = self.get_nomenclature_anm()
@@ -151,7 +181,6 @@ class ModelInteractiveCtrl(Module):
         self.attr_sensitivity_ty.set(channelBox=True)
         self.attr_sensitivity_tz.set(channelBox=True)
 
-
         #
         # Create the ctrl
         #
@@ -191,7 +220,6 @@ class ModelInteractiveCtrl(Module):
         # Constraint position
         # TODO: Validate that we don't need to inverse the rotation separately.
         if parent_pos is None:
-            fol_mesh = None
             if follow_mesh:
                 fol_name = nomenclature_rig.resolve('follicle')
                 fol_shape = libRigging.create_follicle2(obj_mesh, u=u_coord, v=v_coord)
@@ -203,89 +231,108 @@ class ModelInteractiveCtrl(Module):
             elif ref:
                 parent_pos = ref
 
-        if parent_pos:
-            pymel.parentConstraint(parent_pos, layer_fol, maintainOffset=True, skipRotate=['x', 'y', 'z'])
-
-        # Constraint rotation
-        # The doritos setup can be hard to control when the rotation of the controller depend on the layer_fol since
-        # any deformation can affect the normal of the faces.
-        if parent_rot:
-            pymel.orientConstraint(parent_rot, layer_fol, maintainOffset=True)
-
-        # Constraint scale
-        if parent_scl:
-            pymel.connectAttr(parent_scl.scaleX, layer_fol.scaleX)
-            pymel.connectAttr(parent_scl.scaleY, layer_fol.scaleY)
-            pymel.connectAttr(parent_scl.scaleZ, layer_fol.scaleZ)
-
-        #
-        # Constraint a specic controller to the avar doritos stack.
-        # Call this method after connecting the ctrl to the necessary avars.
-        # The sensibility of the doritos will be automatically computed in this step if necessary.
-        #
-
-
-
         # Create inverted attributes for sensibility
-        util_sensitivity_inv = libRigging.create_utility_node('multiplyDivide', operation=2,
-                                                              input1X=1.0, input1Y=1.0, input1Z=1.0,
-                                                              input2X=self.attr_sensitivity_tx,
-                                                              input2Y=self.attr_sensitivity_ty,
-                                                              input2Z=self.attr_sensitivity_tz
-                                                              )
+        util_sensitivity_inv = libRigging.create_utility_node(
+            'multiplyDivide', operation=2,
+            input1X=1.0, input1Y=1.0, input1Z=1.0,
+            input2X=self.attr_sensitivity_tx,
+            input2Y=self.attr_sensitivity_ty,
+            input2Z=self.attr_sensitivity_tz
+        )
         attr_sensibility_lr_inv = util_sensitivity_inv.outputX
         attr_sensibility_ud_inv = util_sensitivity_inv.outputY
         attr_sensibility_fb_inv = util_sensitivity_inv.outputZ
 
+        if self._BIND_METHOD == ModelInteractiveCtrlBindMethod.Follicle:
 
-        #
-        # Inverse translation
-        #
-        attr_ctrl_inv_t = libRigging.create_utility_node(
-            'multiplyDivide', input1=self.ctrl.node.t,
-            input2=[-1, -1, -1]
-        ).output
+            if parent_pos:
+                pymel.parentConstraint(parent_pos, layer_fol, maintainOffset=True, skipRotate=['x', 'y', 'z'])
 
-        attr_ctrl_inv_t = libRigging.create_utility_node(
-            'multiplyDivide',
-            input1=attr_ctrl_inv_t,
-            input2X=self.attr_sensitivity_tx,
-            input2Y=self.attr_sensitivity_ty,
-            input2Z=self.attr_sensitivity_tz
-        ).output
+            # Constraint rotation
+            # The doritos setup can be hard to control when the rotation of the controller depend on the layer_fol since
+            # any deformation can affect the normal of the faces.
+            if parent_rot:
+                pymel.orientConstraint(parent_rot, layer_fol, maintainOffset=True)
 
-        layer_inv_t = self._stack.append_layer(name='inverseT')
+            # Constraint scale
+            if parent_scl:
+                pymel.connectAttr(parent_scl.scaleX, layer_fol.scaleX)
+                pymel.connectAttr(parent_scl.scaleY, layer_fol.scaleY)
+                pymel.connectAttr(parent_scl.scaleZ, layer_fol.scaleZ)
 
-        if flip_lr:
-            attr_doritos_tx = libRigging.create_utility_node(
+            #
+            # Constraint a specic controller to the avar doritos stack.
+            # Call this method after connecting the ctrl to the necessary avars.
+            # The sensibility of the doritos will be automatically computed in this step if necessary.
+            #
+
+
+
+
+
+
+            #
+            # Inverse translation
+            #
+            attr_ctrl_inv_t = libRigging.create_utility_node(
+                'multiplyDivide', input1=self.ctrl.node.t,
+                input2=[-1, -1, -1]
+            ).output
+
+            attr_ctrl_inv_t = libRigging.create_utility_node(
                 'multiplyDivide',
-                input1X=attr_ctrl_inv_t.outputX,
-                input2X=-1
-            ).outputX
-        else:
-            attr_doritos_tx = attr_ctrl_inv_t.outputX
-        attr_doritos_ty = attr_ctrl_inv_t.outputY
-        attr_doritos_tz = attr_ctrl_inv_t.outputZ
+                input1=attr_ctrl_inv_t,
+                input2X=self.attr_sensitivity_tx,
+                input2Y=self.attr_sensitivity_ty,
+                input2Z=self.attr_sensitivity_tz
+            ).output
 
-        pymel.connectAttr(attr_doritos_tx, layer_inv_t.tx)
-        pymel.connectAttr(attr_doritos_ty, layer_inv_t.ty)
-        pymel.connectAttr(attr_doritos_tz, layer_inv_t.tz)
+            layer_inv_t = self._stack.append_layer(name='inverseT')
 
-        #
-        # Inverse rotation
-        # Add an inverse node that will counter animate the position of the ctrl.
-        # TODO: Rename
-        #
-        layer_inv_r = self._stack.append_layer(name='inverseR')
-        # layer_doritos = pymel.createNode('transform', name=layer_doritos_name)
-        # layer_doritos.setParent(self._stack.node)
+            if flip_lr:
+                attr_doritos_tx = libRigging.create_utility_node(
+                    'multiplyDivide',
+                    input1X=attr_ctrl_inv_t.outputX,
+                    input2X=-1
+                ).outputX
+            else:
+                attr_doritos_tx = attr_ctrl_inv_t.outputX
+            attr_doritos_ty = attr_ctrl_inv_t.outputY
+            attr_doritos_tz = attr_ctrl_inv_t.outputZ
 
-        # Create inverse attributes for the ctrl
+            pymel.connectAttr(attr_doritos_tx, layer_inv_t.tx)
+            pymel.connectAttr(attr_doritos_ty, layer_inv_t.ty)
+            pymel.connectAttr(attr_doritos_tz, layer_inv_t.tz)
 
-        attr_ctrl_inv_r = libRigging.create_utility_node('multiplyDivide', input1=self.ctrl.node.r,
-                                                         input2=[-1, -1, -1]).output
+            #
+            # Inverse rotation
+            # Add an inverse node that will counter animate the position of the ctrl.
+            # TODO: Rename
+            #
+            layer_inv_r = self._stack.append_layer(name='inverseR')
+            # layer_doritos = pymel.createNode('transform', name=layer_doritos_name)
+            # layer_doritos.setParent(self._stack.node)
 
-        pymel.connectAttr(attr_ctrl_inv_r, layer_inv_r.r)
+            # Create inverse attributes for the ctrl
+
+            attr_ctrl_inv_r = libRigging.create_utility_node('multiplyDivide', input1=self.ctrl.node.r,
+                                                             input2=[-1, -1, -1]).output
+
+            pymel.connectAttr(attr_ctrl_inv_r, layer_inv_r.r)
+
+        elif self._BIND_METHOD == ModelInteractiveCtrlBindMethod.Constraint:
+            targets, weights = parent.get_area_ratios(avar)
+            if not targets and self.parent:
+                targets = [self.parent]
+                weights = [1.0]
+
+            if not targets:
+                raise Exception("Found no targets for {}".format(avar))
+
+            # Create constraint and set appropriate weights.
+            point_constraint = pymel.pointConstraint(targets, layer_fol, maintainOffset=True)
+            for attr, weight in zip(point_constraint.getWeightAliasList(), weights):
+                attr.set(weight)
 
 
         #
@@ -476,5 +523,5 @@ class ModelInteractiveCtrl(Module):
             self.debug('Adjusting sensibility tz for {0} to {1}'.format(self, sensitivity_tz))
             self.attr_sensitivity_tz.set(sensitivity_tz)
 
-
-
+def register_plugin():
+    return ModelInteractiveCtrl

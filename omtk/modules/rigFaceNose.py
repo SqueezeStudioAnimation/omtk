@@ -22,8 +22,6 @@ class FaceNose(rigFaceAvarGrps.AvarGrpOnSurface):
     The Nose is composed of two zones. The uppernose and the lower nose.
     The uppernose is user specifically for it's yaw and pitch rotation.
     Everything under is considered a nostril.
-
-    Note that this was done reallllly quickly and cleanup may be needed in the future.
     """
     #_DEFORMATION_ORDER = 'post'
     #_CLS_AVAR = AvarJaw

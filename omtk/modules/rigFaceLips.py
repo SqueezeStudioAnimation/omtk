@@ -650,15 +650,6 @@ class FaceLips(rigFaceAvarGrps.AvarGrpOnSurface):
             libRigging.connectAttr_withLinearDrivenKeys(self.avar_r.attr_ud, avar_r_corner.attr_ud)
             libRigging.connectAttr_withLinearDrivenKeys(self.avar_r.attr_fb, avar_r_corner.attr_fb)
 
-    @libPython.memoized_instancemethod
-    def _get_mouth_width(self):
-        min_x = max_x = 0
-        for avar in self.get_avars_corners():
-            x = avar._grp_offset.tx.get()
-            min_x = min(min_x, x)
-            max_x = max(max_x, x)
-        return min_x, max_x
-
     def _connect_avar_macro_all(self, **kwargs):
         """
         # We'll connect the avar_ud ourself but will use the avar_ud_bypass instead.
@@ -709,7 +700,7 @@ class FaceLips(rigFaceAvarGrps.AvarGrpOnSurface):
                 self.error("Failed parenting avars, no jaw influence found!")
                 return
 
-            min_x, max_x = self._get_mouth_width()
+            min_x, max_x = self.get_area_bounds_x()
             mouth_width = max_x - min_x
 
             def connect_avar(avar, ratio):
@@ -720,6 +711,7 @@ class FaceLips(rigFaceAvarGrps.AvarGrpOnSurface):
             for avar in self.get_avars_corners():
                 connect_avar(avar, 0.5)
 
+            # todo: replace with self.get_area_ratio_x(avar)
             for avar in self.get_avars_upp():
                 if use_football_interpolation:
                     avar_pos_x = avar._grp_offset.tx.get()
