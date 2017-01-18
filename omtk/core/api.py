@@ -152,7 +152,7 @@ def with_preserve_selection():
     else:
         pymel.select(clear=True)
 
-
+@libPython.profiler
 def build_selected(sel=None):
     with with_preserve_selection():
         rig, modules = _get_modules_from_selection()
@@ -187,6 +187,7 @@ def build_selected(sel=None):
         libSerialization.export_network(rig)
 
 
+@libPython.profiler
 def unbuild_selected(sel=None):
     with with_preserve_selection():
         rig, modules = _get_modules_from_selection()

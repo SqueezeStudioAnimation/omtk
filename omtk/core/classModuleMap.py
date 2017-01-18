@@ -9,6 +9,7 @@ class ModuleMap(Module):
     _CLS_CTRL_MODEL = None  # please redefine!
     _CLS_CTRL = None  # please redefine!
     DEFAULT_NAME_USE_FIRST_INPUT = True
+    _NAME_CTRL_ENUMERATE = False  # If set to true, the ctrl will use the module name. Otherwise they will use their associated input name.
 
     def __init__(self, *args, **kwargs):
         super(ModuleMap, self).__init__(*args, **kwargs)
@@ -87,8 +88,13 @@ class ModuleMap(Module):
             model.grp_rig.setParent(self.grp_rig)
 
     def build_models(self, **kwargs):
-        for model in self.models:
-            self.build_model(model, **kwargs)
+        nomenclature_anm = self.get_nomenclature_anm()
+
+        for i, model in enumerate(self.models):
+            ctrl_name = None
+            if self._NAME_CTRL_ENUMERATE:
+                ctrl_name = nomenclature_anm.resolve('{0:02d}'.format(i))
+            self.build_model(model, ctrl_name=ctrl_name, **kwargs)
 
     def build(self, create_grp_anm=True, create_grp_rig=True, connect_global_scale=True, segmentScaleCompensate=None, parent=True, **model_kwargs):
         super(ModuleMap, self).build(

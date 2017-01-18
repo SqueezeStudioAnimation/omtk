@@ -78,9 +78,9 @@ class CtrlModelCalibratable(BaseCtrlModel):
         # Keep in memory the inversed sensitivity attributes for future reuse.
         # Note that since theses attributes are protected, they won't get serialized
         # in the scene. Use them only in the build process.
-        self._attr_sensitivity_tx_inv = None
-        self._attr_sensitivity_ty_inv = None
-        self._attr_sensitivity_tz_inv = None
+        self._attr_sensibility_lr_inv = None
+        self._attr_sensibility_ud_inv = None
+        self._attr_sensibility_fb_inv = None
 
     def build(self, module, **kwargs):
         super(CtrlModelCalibratable, self).build(module, **kwargs)

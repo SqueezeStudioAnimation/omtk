@@ -86,7 +86,7 @@ class FK(Module):
                 if len(self.jnts) == 1 and self._NAME_CTRL_MERGE:
                     ctrl_name = nomenclature_anm.resolve()
                 elif self._NAME_CTRL_ENUMERATE:
-                    ctrl_name = nomenclature_anm.resolve('{0:02d}'.format(ctrl_index))
+                    ctrl_name = nomenclature_anm.resolve('{0:02d}'.format(j))
                 else:
                     nomenclature = nomenclature_anm + self.rig.nomenclature(jnt.name())
                     ctrl_name = nomenclature.resolve()

@@ -155,7 +155,7 @@ class InteractiveFKCtrlModel(classCtrlModel.CtrlModelCalibratable):
         # Compute the parent offset and the deformation offset toguether.
         attr_total_offset = libRigging.create_utility_node(
             'multMatrix',
-            name=nomenclature_rig.resolve('getOffset'),
+            name=nomenclature_rig.resolve('getCtrlOffset'),
             matrixIn=(
                 attr_offset_tm,
                 attr_bind_tm,
@@ -411,6 +411,7 @@ class InteractiveFKLayer(ModuleMap):
         attr_parent_follicle_world_tm_inv = parent_model._grp_bind.inverseMatrix
         attr_follicle_delta_tm = libRigging.create_utility_node(
             'multMatrix',
+            name=nomenclature_rig.resolve('getFollicleLocalDeltaTM'),
             matrixIn=(
                 attr_follicle_world_tm,
                 attr_parent_follicle_world_tm_inv,
@@ -419,7 +420,7 @@ class InteractiveFKLayer(ModuleMap):
         ).matrixSum
         attr_follicle_delta_tm_inv = libRigging.create_utility_node(
             'inverseMatrix',
-            name=nomenclature_rig.resolve('getLocalBindPoseInv'),
+            name=nomenclature_rig.resolve('getFollicleLocalDeltaInv'),
             inputMatrix=attr_follicle_delta_tm
         ).outputMatrix
         attr_offset_tm = libRigging.create_utility_node(
@@ -436,6 +437,7 @@ class InteractiveFKLayer(ModuleMap):
         ).matrixSum
         util_decompose_offset_tm = libRigging.create_utility_node(
             'decomposeMatrix',
+            name=nomenclature_rig.resolve('decomposeOffsetTM'),
             inputMatrix=attr_offset_tm
         )
         pymel.connectAttr(util_decompose_offset_tm.outputTranslate, model._grp_offset.translate)
