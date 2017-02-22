@@ -395,11 +395,15 @@ class BaseCtrl(Node):
         # By Default, the active space will be local, else root and finally fallback on the first index found
         if add_default:
             self.node.space.set(default_name)
-        elif self._reserved_idx['root'] in self.targets_indexes:
-            self.node.space.set(self._reserved_idx['root'])
-        else:
-            if self.targets_indexes:
-                self.node.space.set(self.targets_indexes[0])
+            return
+
+        if constants.SpaceSwitchReservedIndex.world in self.targets_indexes:
+            index = self.targets_indexes.index(constants.SpaceSwitchReservedIndex.world)
+            self.node.space.set(index)
+            return
+
+        if self.targets_indexes:
+            self.node.space.set(self.targets_indexes[0])
 
     def get_spaceswitch_targets(self, module, jnt, add_world=True, add_root=True, add_local=True,
                                 root_name='Root', world_name='World', **kwargs):
